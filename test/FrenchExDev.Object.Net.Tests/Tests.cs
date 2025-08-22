@@ -37,14 +37,6 @@ public sealed class Tests
             }
             return this;
         }
-
-        public TestClass Set(int? value, string? anotherValue, TestClass? nestedObject)
-        {
-            Value = value;
-            AnotherValue = anotherValue;
-            NestedObject = nestedObject;
-            return this;
-        }
     }
 
     internal class TestBuilder : AbstractObjectBuilder<TestClass>
