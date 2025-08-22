@@ -5,49 +5,9 @@ namespace FrenchExDev.Object.Net.Tests;
 [TestClass]
 public sealed class Tests
 {
-    public abstract class AbstractObjectValidator<TClass> : IObjectValidator<TClass>
-        where TClass : notnull
-    {
-        private readonly Dictionary<object, ObjectValidation> VisitedInstances = new();
-
-        public async Task<IObjectValidation> ValidateAsync(TClass instance, CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(instance);
-            if (VisitedInstances.TryGetValue(instance, out var existingValidation))
-            {
-                return existingValidation;
-            }
-
-            var dictionary = new ObjectValidation();
-            VisitedInstances.Add(instance, dictionary);
-            await ValidateInternalAsync(instance, dictionary, cancellationToken);
-            return dictionary;
-        }
-
-        protected abstract Task ValidateInternalAsync(TClass instance, ObjectValidation dictionary, CancellationToken cancellationToken = default);
-    }
-
-
-    public class ObjectValidation : Dictionary<string, object>, IObjectValidation
-    {
-        public bool IsValid => this.Count == 0;
-    }
-
-    public class FieldValidation<TObjectMemberValidation> : IObjectMemberValidation
-         where TObjectMemberValidation : notnull
-    {
-        public FieldValidation(TObjectMemberValidation validation, string member)
-        {
-            Validation = validation;
-            Member = member;
-        }
-        public TObjectMemberValidation Validation { get; }
-        public string Member { get; }
-    }
-
     internal class TestClass
     {
-        public enum Members
+        public enum Member
         {
             Value,
             AnotherValue,
@@ -69,9 +29,9 @@ public sealed class Tests
         }
     }
 
-    internal class TestValidator : AbstractObjectValidator<TestClass>
+    internal class TestValidator : AbstractObjectValidator<TestClass, TestClass.Member>
     {
-        protected override async Task ValidateInternalAsync(TestClass instance, ObjectValidation dictionary, CancellationToken cancellationToken = default)
+        protected override async Task ValidateInternalAsync(TestClass instance, ObjectValidation<TestClass.Member> dictionary, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
             ArgumentNullException.ThrowIfNull(dictionary);
@@ -80,12 +40,12 @@ public sealed class Tests
             {
                 var nestedValidationResult = await ValidateAsync(instance.NestedObject, cancellationToken);
                 ArgumentNullException.ThrowIfNull(nestedValidationResult, nameof(nestedValidationResult));
-                dictionary.Add(TestClass.Members.NestedObject.ToString(), nestedValidationResult);
+                dictionary.Add(TestClass.Member.NestedObject, nestedValidationResult);
             }
 
             if (instance.Value.HasValue && instance.Value.Value < 0)
             {
-                dictionary.Add(TestClass.Members.Value.ToString(), new FieldValidation<string>("Value must be non-negative", TestClass.Members.Value.ToString()));
+                dictionary.Add(TestClass.Member.Value, new FieldValidation<TestClass.Member, string>("Value must be non-negative", TestClass.Member.Value));
             }
         }
     }
@@ -99,9 +59,9 @@ public sealed class Tests
 
         var validator = new TestValidator();
         var result = await validator.ValidateAsync(instance);
-        result.ShouldBeAssignableTo<ObjectValidation>();
+        result.ShouldBeAssignableTo<ObjectValidation<TestClass.Member>>();
 
-        var objectValidation = (ObjectValidation)result;
+        var objectValidation = (ObjectValidation<TestClass.Member>)result;
 
         objectValidation.IsValid.ShouldBeTrue();
     }
@@ -122,9 +82,9 @@ public sealed class Tests
         var validator = new TestValidator();
 
         var validationResult = await validator.ValidateAsync(instance);
-        validationResult.ShouldBeAssignableTo<ObjectValidation>();
+        validationResult.ShouldBeAssignableTo<ObjectValidation<TestClass.Member>>();
 
-        var objectValidation = (ObjectValidation)validationResult;
+        var objectValidation = (ObjectValidation<TestClass.Member>)validationResult;
 
         objectValidation.IsValid.ShouldBeFalse();
     }
@@ -147,9 +107,9 @@ public sealed class Tests
         var validator = new TestValidator();
 
         var validationResult = await validator.ValidateAsync(instance);
-        validationResult.ShouldBeAssignableTo<ObjectValidation>();
+        validationResult.ShouldBeAssignableTo<ObjectValidation<TestClass.Member>>();
 
-        var objectValidation = (ObjectValidation)validationResult;
+        var objectValidation = (ObjectValidation<TestClass.Member>)validationResult;
 
         objectValidation.IsValid.ShouldBeFalse();
     }
