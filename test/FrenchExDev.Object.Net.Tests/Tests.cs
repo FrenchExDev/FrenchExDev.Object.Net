@@ -1,4 +1,5 @@
 ﻿using Shouldly;
+using static FrenchExDev.Object.Net.Tests.Tests.TestClass;
 
 namespace FrenchExDev.Object.Net.Tests;
 
@@ -45,54 +46,27 @@ public sealed class Tests
         private string? _anotherValue;
         private TestBuilder? _nestedObject;
 
-        public override TestBuilder With<T>(TestClass.Member member, T? value) where T : default
+        public TestBuilder WithValue(int? value)
         {
-            switch (member)
-            {
-                case TestClass.Member.Value:
-                    _value = (int?)(object?)value;
-                    break;
-                case TestClass.Member.AnotherValue:
-                    _anotherValue = (string?)(object?)value;
-                    break;
-                case TestClass.Member.NestedObject:
-                    _nestedObject = (TestBuilder?)(object?)value;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(member), member, null);
-            }
+            _value = value;
             return this;
         }
 
-        public override TestBuilder With<TWithClass, TWithBuilder>(TestClass.Member member, Action<TWithBuilder> valueFactory)
+        public TestBuilder WithAnotherValue(string? anotherValue)
         {
-            switch (member)
-            {
-                case TestClass.Member.NestedObject:
-                    var builder = new TWithBuilder();
-                    valueFactory(builder);
-                    _nestedObject = (TestBuilder?)(object?)builder;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(member), member, null);
-            }
-
+            _anotherValue = anotherValue;
             return this;
         }
 
-        public override async Task<TestBuilder> WithAsync<TWithClass, TWithBuilder>(TestClass.Member member, Func<TWithBuilder, CancellationToken, Task> asyncValueFactory, CancellationToken cancellationToken = default)
+        public TestBuilder WithNestedObject(TestBuilder? nestedObject)
         {
-            switch (member)
-            {
-                case TestClass.Member.NestedObject:
-                    var builder = new TWithBuilder();
-                    await asyncValueFactory(builder, cancellationToken);
-                    _nestedObject = (TestBuilder?)(object?)builder;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(member), member, null);
-            }
-
+            _nestedObject = nestedObject;
+            return this;
+        }
+        public TestBuilder WithNestedObject(Action<TestBuilder> builder)
+        {
+            _nestedObject = new TestBuilder();
+            builder(_nestedObject);
             return this;
         }
 
@@ -125,16 +99,19 @@ public sealed class Tests
 
     internal class TestValidator : AbstractObjectValidator<TestClass, TestClass.Member>
     {
-        protected override async Task ValidateInternalAsync(TestClass instance, ObjectValidation<TestClass.Member> dictionary, CancellationToken cancellationToken = default)
+        protected override async Task ValidateInternalAsync(TestClass instance, ObjectValidation<TestClass.Member> dictionary, Dictionary<object, object> visited, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
             ArgumentNullException.ThrowIfNull(dictionary);
 
             if (instance.NestedObject != null)
             {
-                var nestedValidationResult = await ValidateAsync(instance.NestedObject, cancellationToken);
+                var nestedValidationResult = await ValidateAsync(instance.NestedObject, visited, cancellationToken);
                 ArgumentNullException.ThrowIfNull(nestedValidationResult, nameof(nestedValidationResult));
-                dictionary.Add(TestClass.Member.NestedObject, nestedValidationResult);
+                if (nestedValidationResult is ObjectValidation<TestClass.Member> nestedObjectValidationCast && !nestedObjectValidationCast.IsValid)
+                {
+                    dictionary.Add(TestClass.Member.NestedObject, nestedValidationResult);
+                }
             }
 
             if (instance.Value.HasValue && instance.Value.Value < 0)
@@ -152,7 +129,7 @@ public sealed class Tests
     [TestMethod]
     public async Task CanBuildAndValidateSimpleObject()
     {
-        var builder = new TestBuilder().With(TestClass.Member.Value, 5);
+        var builder = new TestBuilder().WithValue(5);
 
         var instance = await builder.BuildAsync();
 
@@ -175,15 +152,15 @@ public sealed class Tests
         var builder = new TestBuilder();
 
         var instance = await builder
-            .With(TestClass.Member.Value, 5)
-            .With(TestClass.Member.AnotherValue, "foo1")
-            .With<TestClass, TestBuilder>(TestClass.Member.NestedObject, valueFactory: (b) => b
-                .With(TestClass.Member.Value, -1)
-                .With(TestClass.Member.AnotherValue, "foo2")
-                .With<TestClass, TestBuilder>(TestClass.Member.NestedObject, (b) => b
-                    .With(TestClass.Member.AnotherValue, "foo3")
-                    .With(TestClass.Member.Value, -2)
-                    .With(TestClass.Member.NestedObject, builder))).BuildAsync();
+            .WithValue(5)
+            .WithAnotherValue("foo1")
+            .WithNestedObject((b) => b
+                .WithValue(-1)
+                .WithAnotherValue("foo2")
+                .WithNestedObject((b) => b
+                    .WithAnotherValue("foo3")
+                    .WithValue(-2)
+                    .WithNestedObject(builder))).BuildAsync();
 
         var validator = new TestValidator();
 
@@ -200,17 +177,14 @@ public sealed class Tests
     [TestMethod]
     public async Task CanBuildAndValidatComplexObjectWithCyclicReferences()
     {
+        var builder2 = new TestBuilder();
         var builder = new TestBuilder();
 
+        builder.WithNestedObject(builder2).WithValue(1);
+        builder2.WithValue(1).WithNestedObject(builder); // cyclic reference
+
         var instance = await builder.BuildAsync();
-
-        var builder2 = new TestBuilder();
         var instance2 = await builder2.BuildAsync();
-
-        instance.NestedObject = instance2;
-        instance.NestedObject.Value = -1;
-
-        instance2.NestedObject = instance; // Create cyclic reference
 
         var validator = new TestValidator();
 
@@ -220,6 +194,6 @@ public sealed class Tests
         var objectValidation = (ObjectValidation<TestClass.Member>)validationResult;
 
         objectValidation.ShouldNotBeNull();
-        objectValidation.IsValid.ShouldBeFalse();
+        objectValidation.IsValid.ShouldBeTrue();
     }
 }

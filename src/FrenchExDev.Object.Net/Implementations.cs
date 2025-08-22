@@ -4,23 +4,22 @@ public abstract class AbstractObjectValidator<TClass, TMember> : IObjectValidato
     where TClass : notnull
     where TMember : Enum
 {
-    private readonly Dictionary<object, ObjectValidation<TMember>> VisitedInstances = new();
-
-    public async Task<IObjectValidation> ValidateAsync(TClass instance, CancellationToken cancellationToken = default)
+    public async Task<IObjectValidation> ValidateAsync(TClass instance, Dictionary<object, object>? visited = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(instance);
-        if (VisitedInstances.TryGetValue(instance, out var existingValidation))
+        visited ??= new();
+        if (visited.TryGetValue(instance, out var existingValidation) && existingValidation is ObjectValidation<TMember> existing)
         {
-            return existingValidation;
+            return existing;
         }
 
         var dictionary = new ObjectValidation<TMember>();
-        VisitedInstances.Add(instance, dictionary);
-        await ValidateInternalAsync(instance, dictionary, cancellationToken);
+        visited.Add(instance, dictionary);
+        await ValidateInternalAsync(instance, dictionary, visited, cancellationToken);
         return dictionary;
     }
 
-    protected abstract Task ValidateInternalAsync(TClass instance, ObjectValidation<TMember> dictionary, CancellationToken cancellationToken = default);
+    protected abstract Task ValidateInternalAsync(TClass instance, ObjectValidation<TMember> dictionary, Dictionary<object, object> visited, CancellationToken cancellationToken = default);
 }
 
 public class ObjectValidation<TMember> : Dictionary<TMember, object>, IObjectValidation
@@ -67,16 +66,6 @@ public abstract class AbstractObjectBuilder<TClass, TMember, TBuilder> : IObject
 
         return instance;
     }
-
-    public abstract TBuilder With<T>(TMember member, T? value);
-
-    public abstract TBuilder With<TWithClass, TWithBuilder>(TMember member, Action<TWithBuilder> valueFactory)
-        where TWithClass : notnull, new()
-        where TWithBuilder : notnull, IObjectBuilder<TWithClass, TMember, TWithBuilder>, new();
-
-    public abstract Task<TBuilder> WithAsync<TWithClass, TWithBuilder>(TMember member, Func<TWithBuilder, CancellationToken, Task> asyncValueFactory, CancellationToken cancellationToken = default)
-        where TWithClass : notnull, new()
-        where TWithBuilder : notnull, IObjectBuilder<TWithClass, TMember, TWithBuilder>, new();
 
     protected abstract Task<TClass> BuildInternalAsync(TClass instance, Dictionary<object, object>? visited = null, CancellationToken cancellationToken = default);
 }

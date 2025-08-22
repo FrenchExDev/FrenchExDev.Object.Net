@@ -23,6 +23,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FrenchExDev.Object.Net", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FrenchExDev.Object.Net.Tests", "test\FrenchExDev.Object.Net.Tests\FrenchExDev.Object.Net.Tests.csproj", "{9AA0B609-E7E6-49C6-B8A8-A01FEC7DFBB2}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{9C6578E7-E4FE-79BB-1635-F363CC1E80DD}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\BuildTestPublish.yaml = .github\workflows\BuildTestPublish.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
