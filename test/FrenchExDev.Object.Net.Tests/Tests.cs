@@ -39,36 +39,60 @@ public sealed class Tests
         }
     }
 
-    internal class TestBuilder : AbstractObjectBuilder<TestClass>
+    internal class TestBuilder : AbstractObjectBuilder<TestClass, TestClass.Member, TestBuilder>
     {
         private int? _value;
         private string? _anotherValue;
         private TestBuilder? _nestedObject;
 
-        public TestBuilder WithValue(int value)
+        public override TestBuilder With<T>(TestClass.Member member, T? value) where T : default
         {
-            _value = value;
+            switch (member)
+            {
+                case TestClass.Member.Value:
+                    _value = (int?)(object?)value;
+                    break;
+                case TestClass.Member.AnotherValue:
+                    _anotherValue = (string?)(object?)value;
+                    break;
+                case TestClass.Member.NestedObject:
+                    _nestedObject = (TestBuilder?)(object?)value;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(member), member, null);
+            }
             return this;
         }
 
-        public TestBuilder WithAnotherValue(string anotherValue)
+        public override TestBuilder With<TWithClass, TWithBuilder>(TestClass.Member member, Action<TWithBuilder> valueFactory)
         {
-            _anotherValue = anotherValue;
+            switch (member)
+            {
+                case TestClass.Member.NestedObject:
+                    var builder = new TWithBuilder();
+                    valueFactory(builder);
+                    _nestedObject = (TestBuilder?)(object?)builder;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(member), member, null);
+            }
+
             return this;
         }
 
-        public TestBuilder WithNestedObject(Action<TestBuilder> configure)
+        public override async Task<TestBuilder> WithAsync<TWithClass, TWithBuilder>(TestClass.Member member, Func<TWithBuilder, CancellationToken, Task> asyncValueFactory, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(configure);
-            _nestedObject = new TestBuilder();
-            configure(_nestedObject);
-            return this;
-        }
+            switch (member)
+            {
+                case TestClass.Member.NestedObject:
+                    var builder = new TWithBuilder();
+                    await asyncValueFactory(builder, cancellationToken);
+                    _nestedObject = (TestBuilder?)(object?)builder;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(member), member, null);
+            }
 
-        public TestBuilder WithNestedObject(TestBuilder other)
-        {
-            ArgumentNullException.ThrowIfNull(other);
-            _nestedObject = other;
             return this;
         }
 
@@ -128,12 +152,16 @@ public sealed class Tests
     [TestMethod]
     public async Task CanBuildAndValidateSimpleObject()
     {
-        var builder = new TestBuilder().WithValue(5);
+        var builder = new TestBuilder().With(TestClass.Member.Value, 5);
 
         var instance = await builder.BuildAsync();
 
+        instance.ShouldBeAssignableTo<TestClass>();
+
         var validator = new TestValidator();
+
         var result = await validator.ValidateAsync(instance);
+
         result.ShouldBeAssignableTo<ObjectValidation<TestClass.Member>>();
 
         var objectValidation = (ObjectValidation<TestClass.Member>)result;
@@ -147,15 +175,15 @@ public sealed class Tests
         var builder = new TestBuilder();
 
         var instance = await builder
-            .WithValue(5)
-            .WithAnotherValue("foo1")
-            .WithNestedObject((b) => b
-                .WithValue(-1)
-                .WithAnotherValue("foo2")
-                .WithNestedObject((b) => b
-                    .WithAnotherValue("foo3")
-                    .WithValue(-2)
-                    .WithNestedObject(builder))).BuildAsync();
+            .With(TestClass.Member.Value, 5)
+            .With(TestClass.Member.AnotherValue, "foo1")
+            .With<TestClass, TestBuilder>(TestClass.Member.NestedObject, valueFactory: (b) => b
+                .With(TestClass.Member.Value, -1)
+                .With(TestClass.Member.AnotherValue, "foo2")
+                .With<TestClass, TestBuilder>(TestClass.Member.NestedObject, (b) => b
+                    .With(TestClass.Member.AnotherValue, "foo3")
+                    .With(TestClass.Member.Value, -2)
+                    .With(TestClass.Member.NestedObject, builder))).BuildAsync();
 
         var validator = new TestValidator();
 

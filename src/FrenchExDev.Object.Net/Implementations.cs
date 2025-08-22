@@ -44,10 +44,14 @@ public class FieldValidation<TMember, TObjectMemberValidation, TValue> : IObject
     public TValue? Value { get; }
 }
 
-public abstract class AbstractObjectBuilder<TClass> : IObjectBuilder<TClass>
+public abstract class AbstractObjectBuilder<TClass, TMember, TBuilder> : IObjectBuilder<TClass, TMember, TBuilder>
     where TClass : notnull, new()
+    where TMember : Enum
+    where TBuilder : IObjectBuilder<TClass, TMember, TBuilder>, new()
 {
-    protected readonly Dictionary<IObjectBuilder<object>, object> VisitedInstances = new();
+    // Utilisation de 'object' comme clé pour éviter le problème de contrainte générique.
+    protected readonly Dictionary<object, object> VisitedInstances = new();
+
     public async Task<TClass> BuildAsync(Dictionary<object, object>? visited = null, CancellationToken cancellationToken = default)
     {
         visited ??= new();
@@ -63,6 +67,16 @@ public abstract class AbstractObjectBuilder<TClass> : IObjectBuilder<TClass>
 
         return instance;
     }
+
+    public abstract TBuilder With<T>(TMember member, T? value);
+
+    public abstract TBuilder With<TWithClass, TWithBuilder>(TMember member, Action<TWithBuilder> valueFactory)
+        where TWithClass : notnull, new()
+        where TWithBuilder : notnull, IObjectBuilder<TWithClass, TMember, TWithBuilder>, new();
+
+    public abstract Task<TBuilder> WithAsync<TWithClass, TWithBuilder>(TMember member, Func<TWithBuilder, CancellationToken, Task> asyncValueFactory, CancellationToken cancellationToken = default)
+        where TWithClass : notnull, new()
+        where TWithBuilder : notnull, IObjectBuilder<TWithClass, TMember, TWithBuilder>, new();
 
     protected abstract Task<TClass> BuildInternalAsync(TClass instance, Dictionary<object, object>? visited = null, CancellationToken cancellationToken = default);
 }
