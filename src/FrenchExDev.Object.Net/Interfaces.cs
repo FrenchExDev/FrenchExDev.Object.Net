@@ -3,7 +3,7 @@
 public interface IObjectBuilder<TClass>
     where TClass : notnull
 {
-    TClass Build(Dictionary<object, object>? visited = null);
+    Task<TClass> BuildAsync(Dictionary<object, object>? visited = null, CancellationToken cancellationToken = default);
 }
 
 public interface IObjectValidation

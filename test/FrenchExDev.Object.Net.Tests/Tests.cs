@@ -5,7 +5,7 @@ namespace FrenchExDev.Object.Net.Tests;
 [TestClass]
 public sealed class Tests
 {
-    internal class TestClass
+    internal class TestClass : AbstractClass<TestClass.Member, TestClass>
     {
         public enum Member
         {
@@ -19,6 +19,25 @@ public sealed class Tests
 
         public TestClass? NestedObject { get; set; }
 
+        public override TestClass Set<T>(Member member, T? value) where T : default
+        {
+            switch (member)
+            {
+                case Member.Value:
+                    Value = (int?)(object?)value;
+                    break;
+                case Member.AnotherValue:
+                    AnotherValue = (string?)(object?)value;
+                    break;
+                case Member.NestedObject:
+                    NestedObject = (TestClass?)(object?)value;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(member), member, null);
+            }
+            return this;
+        }
+
         public TestClass Set(int? value, string? anotherValue, TestClass? nestedObject)
         {
             Value = value;
@@ -28,10 +47,8 @@ public sealed class Tests
         }
     }
 
-    internal class TestBuilder : IObjectBuilder<TestClass>
+    internal class TestBuilder : AbstractObjectBuilder<TestClass>
     {
-        private readonly Dictionary<IObjectBuilder<object>, object> VisitedInstances = new();
-
         private int? _value;
         private string? _anotherValue;
         private TestBuilder? _nestedObject;
@@ -63,20 +80,28 @@ public sealed class Tests
             return this;
         }
 
-        public TestClass Build(Dictionary<object, object>? visited = null)
+        protected override async Task<TestClass> BuildInternalAsync(TestClass instance, Dictionary<object, object>? visited = null, CancellationToken cancellationToken = default)
         {
-            visited ??= new();
-
-            if (visited.TryGetValue(this, out var existing))
+            foreach (var member in Enum.GetValues<TestClass.Member>())
             {
-                return (TestClass)existing;
+                switch (member)
+                {
+                    case TestClass.Member.Value:
+                        instance.Set(TestClass.Member.Value, _value);
+                        break;
+                    case TestClass.Member.AnotherValue:
+                        instance.Set(TestClass.Member.AnotherValue, _anotherValue);
+                        break;
+                    case TestClass.Member.NestedObject:
+                        if (_nestedObject != null)
+                        {
+                            instance.Set(TestClass.Member.NestedObject, await _nestedObject.BuildAsync(visited, cancellationToken));
+                        }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
-
-            var instance = new TestClass();
-
-            visited[this] = instance;
-
-            instance.Set(_value, _anotherValue, _nestedObject?.Build(visited));
 
             return instance;
         }
@@ -111,9 +136,9 @@ public sealed class Tests
     [TestMethod]
     public async Task CanBuildAndValidateSimpleObject()
     {
-        var builder = new TestBuilder();
+        var builder = new TestBuilder().WithValue(5);
 
-        var instance = builder.WithValue(5).Build();
+        var instance = await builder.BuildAsync();
 
         var validator = new TestValidator();
         var result = await validator.ValidateAsync(instance);
@@ -129,7 +154,7 @@ public sealed class Tests
     {
         var builder = new TestBuilder();
 
-        var instance = builder
+        var instance = await builder
             .WithValue(5)
             .WithAnotherValue("foo1")
             .WithNestedObject((b) => b
@@ -138,7 +163,7 @@ public sealed class Tests
                 .WithNestedObject((b) => b
                     .WithAnotherValue("foo3")
                     .WithValue(-2)
-                    .WithNestedObject(builder))).Build();
+                    .WithNestedObject(builder))).BuildAsync();
 
         var validator = new TestValidator();
 
@@ -157,10 +182,10 @@ public sealed class Tests
     {
         var builder = new TestBuilder();
 
-        var instance = builder.Build();
+        var instance = await builder.BuildAsync();
 
         var builder2 = new TestBuilder();
-        var instance2 = builder2.Build();
+        var instance2 = await builder2.BuildAsync();
 
         instance.NestedObject = instance2;
         instance.NestedObject.Value = -1;
