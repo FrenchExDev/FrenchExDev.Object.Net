@@ -1,0 +1,10 @@
+{
+  "projects": [
+    "FrenchexDev.Mm.Net",
+    "FrenchexDev.Mm.Net.ClassModule",
+    "FrenchexDev.Mm.Net.ClassModule.Abstractions",
+    "FrenchexDev.Mm.Net.Module",
+    "FrenchexDev.Mm.Net.Testing"
+  ],
+  "outputPath": "../../../__Nuget_Local_Registry__/"
+}
