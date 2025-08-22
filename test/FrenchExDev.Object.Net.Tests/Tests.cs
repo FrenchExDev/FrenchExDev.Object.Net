@@ -63,6 +63,7 @@ public sealed class Tests
             _nestedObject = nestedObject;
             return this;
         }
+
         public TestBuilder WithNestedObject(Action<TestBuilder> builder)
         {
             _nestedObject = new TestBuilder();

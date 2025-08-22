@@ -103,61 +103,62 @@ internal class TestClass : AbstractClass<TestClass.Member, TestClass>
 
 ```csharp
 internal class TestBuilder : AbstractObjectBuilder<TestClass, TestClass.Member, TestBuilder>
-{
-    private int? _value;
-    private string? _anotherValue;
-    private TestBuilder? _nestedObject;
+    {
+        private int? _value;
+        private string? _anotherValue;
+        private TestBuilder? _nestedObject;
 
-    public TestBuilder WithValue(int? value)
-    {
-        _value = value;
-        return this;
-    }
-
-    public TestBuilder WithAnotherValue(string? anotherValue)
-    {
-        _anotherValue = anotherValue;
-        return this;
-    }
-
-    public TestBuilder WithNestedObject(TestBuilder? nestedObject)
-    {
-        _nestedObject = nestedObject;
-        return this;
-    }
-    public TestBuilder WithNestedObject(Action<TestBuilder> builder)
-    {
-        _nestedObject = new TestBuilder();
-        builder(_nestedObject);
-        return this;
-    }
-
-    protected override async Task<TestClass> BuildInternalAsync(TestClass instance, Dictionary<object, object>? visited = null, CancellationToken cancellationToken = default)
-    {
-        foreach (var member in Enum.GetValues<TestClass.Member>())
+        public TestBuilder WithValue(int? value)
         {
-            switch (member)
-            {
-                case TestClass.Member.Value:
-                    instance.Set(TestClass.Member.Value, _value);
-                    break;
-                case TestClass.Member.AnotherValue:
-                    instance.Set(TestClass.Member.AnotherValue, _anotherValue);
-                    break;
-                case TestClass.Member.NestedObject:
-                    if (_nestedObject != null)
-                    {
-                        instance.Set(TestClass.Member.NestedObject, await _nestedObject.BuildAsync(visited, cancellationToken));
-                    }
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            _value = value;
+            return this;
         }
 
-        return instance;
+        public TestBuilder WithAnotherValue(string? anotherValue)
+        {
+            _anotherValue = anotherValue;
+            return this;
+        }
+
+        public TestBuilder WithNestedObject(TestBuilder? nestedObject)
+        {
+            _nestedObject = nestedObject;
+            return this;
+        }
+
+        public TestBuilder WithNestedObject(Action<TestBuilder> builder)
+        {
+            _nestedObject = new TestBuilder();
+            builder(_nestedObject);
+            return this;
+        }
+
+        protected override async Task<TestClass> BuildInternalAsync(TestClass instance, Dictionary<object, object>? visited = null, CancellationToken cancellationToken = default)
+        {
+            foreach (var member in Enum.GetValues<TestClass.Member>())
+            {
+                switch (member)
+                {
+                    case TestClass.Member.Value:
+                        instance.Set(TestClass.Member.Value, _value);
+                        break;
+                    case TestClass.Member.AnotherValue:
+                        instance.Set(TestClass.Member.AnotherValue, _anotherValue);
+                        break;
+                    case TestClass.Member.NestedObject:
+                        if (_nestedObject != null)
+                        {
+                            instance.Set(TestClass.Member.NestedObject, await _nestedObject.BuildAsync(visited, cancellationToken));
+                        }
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            return instance;
+        }
     }
-}
 ```
 
 ## The Subject' Validator
@@ -165,16 +166,19 @@ internal class TestBuilder : AbstractObjectBuilder<TestClass, TestClass.Member, 
 ```csharp
 internal class TestValidator : AbstractObjectValidator<TestClass, TestClass.Member>
 {
-    protected override async Task ValidateInternalAsync(TestClass instance, ObjectValidation<TestClass.Member> dictionary, CancellationToken cancellationToken = default)
+    protected override async Task ValidateInternalAsync(TestClass instance, ObjectValidation<TestClass.Member> dictionary, Dictionary<object, object> visited, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(instance);
         ArgumentNullException.ThrowIfNull(dictionary);
 
         if (instance.NestedObject != null)
         {
-            var nestedValidationResult = await ValidateAsync(instance.NestedObject, cancellationToken);
+            var nestedValidationResult = await ValidateAsync(instance.NestedObject, visited, cancellationToken);
             ArgumentNullException.ThrowIfNull(nestedValidationResult, nameof(nestedValidationResult));
-            dictionary.Add(TestClass.Member.NestedObject, nestedValidationResult);
+            if (nestedValidationResult is ObjectValidation<TestClass.Member> nestedObjectValidationCast && !nestedObjectValidationCast.IsValid)
+            {
+                dictionary.Add(TestClass.Member.NestedObject, nestedValidationResult);
+            }
         }
 
         if (instance.Value.HasValue && instance.Value.Value < 0)
