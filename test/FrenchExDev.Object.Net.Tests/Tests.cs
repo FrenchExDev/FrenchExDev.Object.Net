@@ -18,14 +18,67 @@ public sealed class Tests
         public string? AnotherValue { get; set; } = string.Empty;
 
         public TestClass? NestedObject { get; set; }
+
+        public TestClass Set(int? value, string? anotherValue, TestClass? nestedObject)
+        {
+            Value = value;
+            AnotherValue = anotherValue;
+            NestedObject = nestedObject;
+            return this;
+        }
     }
 
     internal class TestBuilder : IObjectBuilder<TestClass>
     {
-        private readonly TestClass _instance = new();
-        public TestClass Build()
+        private readonly Dictionary<IObjectBuilder<object>, object> VisitedInstances = new();
+
+        private int? _value;
+        private string? _anotherValue;
+        private TestBuilder? _nestedObject;
+
+        public TestBuilder WithValue(int value)
         {
-            return _instance;
+            _value = value;
+            return this;
+        }
+
+        public TestBuilder WithAnotherValue(string anotherValue)
+        {
+            _anotherValue = anotherValue;
+            return this;
+        }
+
+        public TestBuilder WithNestedObject(Action<TestBuilder> configure)
+        {
+            ArgumentNullException.ThrowIfNull(configure);
+            _nestedObject = new TestBuilder();
+            configure(_nestedObject);
+            return this;
+        }
+
+        public TestBuilder WithNestedObject(TestBuilder other)
+        {
+            ArgumentNullException.ThrowIfNull(other);
+            _nestedObject = other;
+            return this;
+        }
+
+        public TestClass Build(Dictionary<object, object>? visited = null)
+        {
+            visited ??= new();
+
+            if (visited.TryGetValue(this, out var existing))
+            {
+                return (TestClass)existing;
+            }
+
+            var instance = new TestClass();
+
+            visited[this] = instance;
+
+            instance.Set(_value, _anotherValue, _nestedObject?.Build(visited));
+
+            return instance;
         }
     }
 
@@ -45,7 +98,12 @@ public sealed class Tests
 
             if (instance.Value.HasValue && instance.Value.Value < 0)
             {
-                dictionary.Add(TestClass.Member.Value, new FieldValidation<TestClass.Member, string>("Value must be non-negative", TestClass.Member.Value));
+                dictionary.Add(TestClass.Member.Value, new FieldValidation<TestClass.Member, string, int?>("Value must be non-negative", TestClass.Member.Value, instance.Value));
+            }
+
+            if (instance.AnotherValue != null && instance.AnotherValue.Length < 5)
+            {
+                dictionary.Add(TestClass.Member.AnotherValue, new FieldValidation<TestClass.Member, string, string>("AnotherValue must be at least 5 characters long", TestClass.Member.AnotherValue, instance.AnotherValue));
             }
         }
     }
@@ -54,15 +112,15 @@ public sealed class Tests
     public async Task CanBuildAndValidateSimpleObject()
     {
         var builder = new TestBuilder();
-        var instance = builder.Build();
-        instance.Value = 5;
+
+        var instance = builder.WithValue(5).Build();
 
         var validator = new TestValidator();
         var result = await validator.ValidateAsync(instance);
         result.ShouldBeAssignableTo<ObjectValidation<TestClass.Member>>();
 
         var objectValidation = (ObjectValidation<TestClass.Member>)result;
-
+        objectValidation.ShouldNotBeNull();
         objectValidation.IsValid.ShouldBeTrue();
     }
 
@@ -71,13 +129,16 @@ public sealed class Tests
     {
         var builder = new TestBuilder();
 
-        var instance = builder.Build();
-
-        var builder2 = new TestBuilder();
-        var instance2 = builder2.Build();
-
-        instance.NestedObject = instance2;
-        instance.NestedObject.Value = -1;
+        var instance = builder
+            .WithValue(5)
+            .WithAnotherValue("foo1")
+            .WithNestedObject((b) => b
+                .WithValue(-1)
+                .WithAnotherValue("foo2")
+                .WithNestedObject((b) => b
+                    .WithAnotherValue("foo3")
+                    .WithValue(-2)
+                    .WithNestedObject(builder))).Build();
 
         var validator = new TestValidator();
 
@@ -85,8 +146,10 @@ public sealed class Tests
         validationResult.ShouldBeAssignableTo<ObjectValidation<TestClass.Member>>();
 
         var objectValidation = (ObjectValidation<TestClass.Member>)validationResult;
-
+        objectValidation.ShouldNotBeNull();
         objectValidation.IsValid.ShouldBeFalse();
+
+        objectValidation[TestClass.Member.AnotherValue].ShouldBeAssignableTo<FieldValidation<TestClass.Member, string, string>>();
     }
 
     [TestMethod]
@@ -111,6 +174,7 @@ public sealed class Tests
 
         var objectValidation = (ObjectValidation<TestClass.Member>)validationResult;
 
+        objectValidation.ShouldNotBeNull();
         objectValidation.IsValid.ShouldBeFalse();
     }
 }

@@ -3,7 +3,7 @@
 public interface IObjectBuilder<TClass>
     where TClass : notnull
 {
-    TClass Build();
+    TClass Build(Dictionary<object, object>? visited = null);
 }
 
 public interface IObjectValidation

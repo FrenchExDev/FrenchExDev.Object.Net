@@ -29,15 +29,17 @@ public class ObjectValidation<TMember> : Dictionary<TMember, object>, IObjectVal
     public bool IsValid => this.Count == 0;
 }
 
-public class FieldValidation<TMember, TObjectMemberValidation> : IObjectMemberValidation
+public class FieldValidation<TMember, TObjectMemberValidation, TValue> : IObjectMemberValidation
     where TMember : Enum
     where TObjectMemberValidation : notnull
 {
-    public FieldValidation(TObjectMemberValidation validation, TMember member)
+    public FieldValidation(TObjectMemberValidation validation, TMember member, TValue? value)
     {
         Validation = validation;
         Member = member;
+        Value = value;
     }
     public TObjectMemberValidation Validation { get; }
     public TMember Member { get; }
+    public TValue? Value { get; }
 }
