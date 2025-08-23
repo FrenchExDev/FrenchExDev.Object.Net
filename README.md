@@ -3,8 +3,10 @@
 
 [![NuGet](https://img.shields.io/nuget/v/FrenchExDev.Object.Net.svg)](https://www.nuget.org/packages/FrenchExDev.Object.Net/)
 [![NuGet](https://img.shields.io/nuget/dt/FrenchExDev.Object.Net.svg)](https://www.nuget.org/packages/FrenchExDev.Object.Net/)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/FrenchExDev/FrenchExDev.Object.Net/BuildTestPublish.yaml?branch=main&label=build&logo=github&style=flat-square)](https://github.com/FrenchExDev/FrenchExDev.Object.Net/actions/workflows/BuildTestPublish.yaml)
-[![GitHub Branch Status#Main](https://img.shields.io/github/checks-status/FrenchExDev/FrenchExDev.Object.Net/main)](https://github.com/FrenchExDev/FrenchExDev.Object.Net/actions/workflows/BuildTestPublish.yaml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/FrenchExDev/FrenchExDev.Object.Net/BuildTestPublish.yaml?branch=main
+)](https://github.com/FrenchExDev/FrenchExDev.Object.Net/actions/workflows/BuildTestPublish.yaml)
+[![GitHub Branch Status#Main](https://img.shields.io/github/check-runs/FrenchExDev/FrenchExDev.Object.Net/main
+)](https://github.com/FrenchExDev/FrenchExDev.Object.Net/actions/workflows/BuildTestPublish.yaml)
 
 
 A tiny & flexible library to build and validate .NET objects.
