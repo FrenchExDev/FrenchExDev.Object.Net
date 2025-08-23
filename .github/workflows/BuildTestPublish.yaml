@@ -47,4 +47,4 @@ jobs:
           path: ./artifacts
 
       - name: Publish to NuGet.org
-        run: dotnet nuget push ./artifacts/FrenchExDev.Object.Net.$("${{ github.ref_name  }}".Replace("v","")).nupkg --api-key ${{ secrets.NUGET_FRENCHEXDEV_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push ./artifacts/FrenchExDev.Object.Net.$("${{ github.ref_name  }}".Replace("v","").nupkg --api-key ${{ secrets.NUGET_FRENCHEXDEV_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
