@@ -3,7 +3,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/FrenchExDev.Object.Net.svg)](https://www.nuget.org/packages/FrenchExDev.Object.Net/)
 [![NuGet](https://img.shields.io/nuget/dt/FrenchExDev.Object.Net.svg)](https://www.nuget.org/packages/FrenchExDev.Object.Net/)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/frenchexdev/frenchexdev-object-net/build.yml?branch=main&label=build&logo=github&style=flat-square)](https://github.com/frenchexdev/frenchexdev-object-net/actions/workflows/build.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/frenchexdev/frenchexdev-object-net/build.yml?branch=main&label=build&logo=github&style=flat-square)](https://github.com/FrenchExDev/FrenchExDev.Object.Net/actions/workflows/BuildTestPublish.yaml)
 
 A tiny & flexible library to build and validate .NET objects.
 
