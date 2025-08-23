@@ -5,7 +5,7 @@
 		<Description>A tiny &amp; flexible object building and validation for .NET in C#.</Description>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryUrl>https://github.com/FrenchExDev/FrenchExDev.Object.Net</RepositoryUrl>
-		<Version>1.0.2</Version>
+		<Version>1.0.3</Version>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageId>FrenchExDev.Object.Net</PackageId>
 		<PackageTags>Object;Building;Validating;Tiny;Flexible</PackageTags>
