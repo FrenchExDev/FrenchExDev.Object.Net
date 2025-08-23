@@ -3,11 +3,20 @@ using static FrenchExDev.Object.Net.Tests.Tests.TestClass;
 
 namespace FrenchExDev.Object.Net.Tests;
 
+/// <summary>
+/// Testing implementation of <see cref="AbstractObjectBuilder{TObject, TMember, TBuilder}"/> and <see cref="AbstractObjectValidator{TObject, TMember}"/>
+/// </summary>
 [TestClass]
 public sealed class Tests
 {
+    /// <summary>
+    /// A simple test class implementing <see cref="AbstractClass{TMember, TSelf}"/>
+    /// </summary>
     internal class TestClass : AbstractClass<TestClass.Member, TestClass>
     {
+        /// <summary>
+        /// An enum representing the members of <see cref="TestClass"/>
+        /// </summary>
         public enum Member
         {
             Value,
@@ -15,11 +24,29 @@ public sealed class Tests
             NestedObject
         }
 
+        /// <summary>
+        /// A simple integer value
+        /// </summary>
         public int? Value { get; set; }
+
+        /// <summary>
+        /// Another simple value
+        /// </summary>
         public string? AnotherValue { get; set; } = string.Empty;
 
+        /// <summary>
+        /// A nested object of the same type to test recursive validation
+        /// </summary>
         public TestClass? NestedObject { get; set; }
 
+        /// <summary>
+        /// Set logic for <see cref="TestClass"/>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="member"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
         public override TestClass Set<T>(Member member, T? value) where T : default
         {
             switch (member)
@@ -40,30 +67,67 @@ public sealed class Tests
         }
     }
 
+    /// <summary>
+    /// Builder implementation for <see cref="TestClass"/>
+    /// </summary>
     internal class TestBuilder : AbstractObjectBuilder<TestClass, TestClass.Member, TestBuilder>
     {
+        /// <summary>
+        /// Holds the value for <see cref="TestClass.Value"/>
+        /// </summary>
         private int? _value;
+
+        /// <summary>
+        /// Holds the value for <see cref="TestClass.AnotherValue"/>
+        /// </summary>
         private string? _anotherValue;
+
+        /// <summary>
+        /// Holds the builder for <see cref="TestClass.NestedObject"/>
+        /// </summary>
         private TestBuilder? _nestedObject;
 
+        /// <summary>
+        /// Provides a fluent way to set <see cref="TestClass.Value"/>
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public TestBuilder WithValue(int? value)
         {
             _value = value;
             return this;
         }
 
+        /// <summary>
+        /// Provides a fluent way to set <see cref="TestClass.AnotherValue"/>
+        /// </summary>
+        /// <param name="anotherValue"></param>
+        /// <returns></returns>
         public TestBuilder WithAnotherValue(string? anotherValue)
         {
             _anotherValue = anotherValue;
             return this;
         }
 
+        /// <summary>
+        /// Provides a fluent way to set <see cref="TestClass.NestedObject"/>
+        /// </summary>
+        /// <param name="nestedObject"></param>
+        /// <returns></returns>
         public TestBuilder WithNestedObject(TestBuilder? nestedObject)
         {
             _nestedObject = nestedObject;
             return this;
         }
 
+        /// <summary>
+        /// Configures a nested <see cref="TestBuilder"/> instance using the specified builder action.
+        /// </summary>
+        /// <remarks>This method creates a new nested <see cref="TestBuilder"/> instance, applies the
+        /// provided  configuration action to it, and retains the nested object for further use.</remarks>
+        /// <param name="builder">An action that configures the nested <see cref="TestBuilder"/> instance.  The action receives the newly
+        /// created <see cref="TestBuilder"/> as a parameter.</param>
+        /// <returns>The current <see cref="TestBuilder"/> instance, allowing for method chaining.</returns>
         public TestBuilder WithNestedObject(Action<TestBuilder> builder)
         {
             _nestedObject = new TestBuilder();
@@ -98,22 +162,29 @@ public sealed class Tests
         }
     }
 
+    /// <summary>
+    /// Provides validation logic for instances of <see cref="TestClass"/> and its members.
+    /// </summary>
+    /// <remarks>This class performs validation on <see cref="TestClass"/> objects, including nested objects
+    /// and specific member values. It ensures that the validated object and its members meet the defined constraints,
+    /// such as non-negative values or minimum string lengths.</remarks>
     internal class TestValidator : AbstractObjectValidator<TestClass, TestClass.Member>
     {
+        /// <summary>
+        /// This method is called internally by <see cref="AbstractObjectValidator{TObject, TMember}.ValidateAsync(TObject, Dictionary{object, object}, CancellationToken)"/>
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="dictionary"></param>
+        /// <param name="visited"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         protected override async Task ValidateInternalAsync(TestClass instance, ObjectValidation<TestClass.Member> dictionary, Dictionary<object, object> visited, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(instance);
             ArgumentNullException.ThrowIfNull(dictionary);
+            ArgumentNullException.ThrowIfNull(visited);
 
-            if (instance.NestedObject != null)
-            {
-                var nestedValidationResult = await ValidateAsync(instance.NestedObject, visited, cancellationToken);
-                ArgumentNullException.ThrowIfNull(nestedValidationResult, nameof(nestedValidationResult));
-                if (nestedValidationResult is ObjectValidation<TestClass.Member> nestedObjectValidationCast && !nestedObjectValidationCast.IsValid)
-                {
-                    dictionary.Add(TestClass.Member.NestedObject, nestedValidationResult);
-                }
-            }
+            await ValidateInternalNestedObjectAsync(instance, dictionary, visited, cancellationToken);
 
             if (instance.Value.HasValue && instance.Value.Value < 0)
             {
@@ -123,6 +194,19 @@ public sealed class Tests
             if (instance.AnotherValue != null && instance.AnotherValue.Length < 5)
             {
                 dictionary.Add(TestClass.Member.AnotherValue, new FieldValidation<TestClass.Member, string, string>("AnotherValue must be at least 5 characters long", TestClass.Member.AnotherValue, instance.AnotherValue));
+            }
+        }
+
+        private async Task ValidateInternalNestedObjectAsync(TestClass instance, ObjectValidation<Member> dictionary, Dictionary<object, object> visited, CancellationToken cancellationToken)
+        {
+            if (instance.NestedObject != null)
+            {
+                var nestedValidationResult = await ValidateAsync(instance.NestedObject, visited, cancellationToken);
+                ArgumentNullException.ThrowIfNull(nestedValidationResult, nameof(nestedValidationResult));
+                if (nestedValidationResult is ObjectValidation<TestClass.Member> nestedObjectValidationCast && !nestedObjectValidationCast.IsValid)
+                {
+                    dictionary.Add(TestClass.Member.NestedObject, nestedValidationResult);
+                }
             }
         }
     }
