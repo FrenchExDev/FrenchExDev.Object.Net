@@ -1,9 +1,30 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Authors>Stéphane ERARD</Authors>
+		<Company>FrenchExDev</Company>
+		<Description>A tiny &amp; flexible object building and validation for .NET in C#.</Description>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/FrenchExDev/FrenchExDev.Object.Net</RepositoryUrl>
+		<PackageVersion>1.0.0</PackageVersion>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageId>FrenchExDev.Object.Net</PackageId>
+		<PackageTags>Object;Building;Validating;Tiny;Flexible</PackageTags>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Version>1.0.0</Version>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+	</PropertyGroup>
 
+	<ItemGroup>
+		<None Update="README.md">
+			<PackagePath>\</PackagePath>
+			<Pack>True</Pack>
+		</None>
+	</ItemGroup>
+	
 </Project>

@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-test:
-    runs-on: linux-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -40,7 +40,7 @@ jobs:
 
   publish:
     needs: build-test
-    runs-on: linux-latest
+    runs-on: self-hosted
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
